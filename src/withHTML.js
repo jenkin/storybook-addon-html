@@ -7,14 +7,20 @@ export const withHTML = makeDecorator({
   skipIfNoParametersOrOptions: false,
   wrapper: (storyFn, context, { parameters = {} }) => {
     const emit = useChannel({});
-    setTimeout(() => {
-      const rootSelector = parameters.root || "#storybook-root, #root";
+
+    const containerSelector = "#storybook-root, #root";
+    const rootSelector = parameters.root || containerSelector;
+
+    const observerConfig = { attributes: false, childList: true, subtree: false };
+    const observerCallback = (mutationList, observer) => {
       const root = document.querySelector(rootSelector);
-      let code = root ? root.innerHTML : `${rootSelector} not found.`;
+      let code = root ? root.innerHTML : `<p>Root selector <code>${rootSelector}</code> doesn't match any element.</p>`;
+
       const { removeEmptyComments, removeComments, transform } = parameters;
       if (removeEmptyComments) {
         code = code.replace(/<!--\s*-->/g, "");
       }
+
       if (removeComments === true) {
         code = code.replace(/<!--[\S\s]*?-->/g, "");
       } else if (removeComments instanceof RegExp) {
@@ -22,6 +28,7 @@ export const withHTML = makeDecorator({
           removeComments.test(p1) ? "" : match,
         );
       }
+
       if (typeof transform === "function") {
         try {
           code = transform(code);
@@ -29,8 +36,19 @@ export const withHTML = makeDecorator({
           console.error(e);
         }
       }
+
       emit(EVENTS.CODE_UPDATE, { code, options: parameters });
-    }, 0);
+      observer.disconnect();
+    };
+
+    const observer = new MutationObserver(observerCallback);
+    const container = document.querySelector(containerSelector);
+    if (container) {
+      observer.observe(container, observerConfig);
+    } else {
+      emit(EVENTS.CODE_UPDATE, { code: `<p>Container selector <code>${containerSelector}</code> doesn't match any element.</p>`, options: parameters });
+    }
+
     return storyFn(context);
   },
 });

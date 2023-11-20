@@ -62,7 +62,7 @@ You can override the wrapper element selector used to grab the component HTML.
 ```js
 export const parameters = {
   html: {
-    root: "#my-custom-wrapper", // default: #root
+    root: "#my-custom-wrapper", // default: "#storybook-root, #root"
   },
 };
 ```
